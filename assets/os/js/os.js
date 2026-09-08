@@ -714,6 +714,8 @@ const OS = (() => {
     renderTaskbar();
     renderCalendar();
     tickClock();
+    $('#tb-search-icon').innerHTML = I.searchColor;
+    $('#tb-search-thumb').innerHTML = I.searchThumb;
     setInterval(tickClock, 1000);
 
     /* power on */
