@@ -14,10 +14,8 @@ const PROFILE = {
   email: 'ck.8107@gmail.com',
   github: 'https://github.com/Prabhatthakur18',
   githubLabel: 'github.com/Prabhatthakur18',
-  // TODO: the resume PDF lists the LinkedIn handle truncated — drop the full
-  // profile URL in here and the Contact app + terminal will start showing it.
-  linkedin: '',
-  linkedinLabel: '',
+  linkedin: 'https://www.linkedin.com/in/prabhat-thakur-447632217',
+  linkedinLabel: 'linkedin.com/in/prabhat-thakur-447632217',
   summary:
     'Full-stack engineer who owns systems end to end — schema design through AWS deployment. ' +
     "Now engineering lead for Amato Automotive India's digital products, where I rebuilt the corporate " +
