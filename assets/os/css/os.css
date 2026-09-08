@@ -800,6 +800,20 @@ a { color: var(--accent); }
 .toast p b { color: var(--text); }
 .toast p { margin: 0; font-size: 12px; color: var(--text-2); line-height: 1.5; }
 .toast-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11.5px; color: var(--text-2); }
+.toast-actions { display: flex; gap: 8px; margin-top: 10px; }
+.toast-btn {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-card);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.toast-btn:hover { background: var(--bg-hover); border-color: var(--accent); }
 .toast-head svg { width: 14px; height: 14px; }
 
 /* ============================================================

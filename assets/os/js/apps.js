@@ -279,6 +279,10 @@ function appContact() {
         <div class="field"><label for="cf-sub">Subject</label><input id="cf-sub" required placeholder="Frontend role at …"></div>
         <div class="field"><label for="cf-msg">Message</label><textarea id="cf-msg" rows="6" required placeholder="Hi Prabhat — "></textarea></div>
         <div class="btnrow"><button class="linkbtn primary" type="submit">${I.mail}Send</button></div>
+        <p style="font-size:11.5px;color:var(--text-3);margin-top:10px">
+          Send hands the message to your mail client — nothing is posted to a server.
+          No mail client? The notification that appears offers Gmail and copy-to-clipboard instead.
+        </p>
       </form>
     </div>`,
     mount(body) {
@@ -287,9 +291,31 @@ function appContact() {
         const name = body.querySelector('#cf-name').value.trim();
         const sub = body.querySelector('#cf-sub').value.trim();
         const msg = body.querySelector('#cf-msg').value.trim();
-        const href = `mailto:${PROFILE.email}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(msg + '\n\n— ' + name)}`;
-        window.location.href = href;
-        OS.toast('Mail', 'Opening your mail client…');
+        const fullBody = msg + '\n\n— ' + name;
+        const q = `subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(fullBody)}`;
+        const mailto = `mailto:${PROFILE.email}?${q}`;
+        const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(PROFILE.email)}&${q}`;
+        const plain = `To: ${PROFILE.email}\nSubject: ${sub}\n\n${fullBody}`;
+
+        // mailto only lands if the visitor has a mail client registered, so the
+        // toast always offers a route that works without one
+        window.location.href = mailto;
+        OS.toast(
+          'Mail',
+          `Handed to your mail client. If nothing opened:
+           <span class="toast-actions">
+             <a class="toast-btn" href="${gmail}" target="_blank" rel="noopener">Open in Gmail</a>
+             <button class="toast-btn" data-copy>Copy message</button>
+           </span>`,
+          I.mail,
+          (node) => {
+            node.querySelectorAll('.toast-btn').forEach((btn) => btn.addEventListener('click', (ev) => ev.stopPropagation()));
+            node.querySelector('[data-copy]').addEventListener('click', async () => {
+              try { await navigator.clipboard.writeText(plain); OS.toast('Mail', 'Message copied — paste it into any mail app.'); }
+              catch { OS.toast('Mail', `Clipboard blocked. Email me directly at <b>${PROFILE.email}</b>.`); }
+            });
+          }
+        );
       });
     }
   };

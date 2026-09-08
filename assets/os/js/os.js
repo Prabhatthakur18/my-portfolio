@@ -559,14 +559,16 @@ const OS = (() => {
   }
 
   /* ---------- toasts ---------- */
-  function toast(title, body, icon) {
+  function toast(title, body, icon, onMount) {
     const t = el('div', 'toast', `
       <div class="toast-head">${icon || I.bell}<span>PrabhatOS</span></div>
       <b>${title}</b><p>${body}</p>`);
     $('#toasts').appendChild(t);
     const kill = () => { t.classList.add('out'); setTimeout(() => t.remove(), 260); };
     t.addEventListener('click', kill);
-    setTimeout(kill, 8000);
+    // actions must not dismiss the toast out from under the click
+    if (onMount) onMount(t, kill);
+    setTimeout(kill, onMount ? 20000 : 8000);
   }
 
   /* ============================================================
