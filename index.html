@@ -140,6 +140,12 @@
 
     <!-- taskbar -->
     <nav id="taskbar">
+      <!-- weather sits in the bottom-left corner, as Windows does -->
+      <button class="tb-weather loading" id="weather-btn" aria-label="Weather">
+        <span class="icon" id="w-icon"></span>
+        <span class="w-text"><b id="w-temp">--°</b><small id="w-desc">New Delhi</small></span>
+      </button>
+
       <div class="tb-center">
         <button class="tb-btn" id="start-btn" title="Start" aria-label="Start">
           <svg viewBox="0 0 24 24" fill="none">
@@ -244,6 +250,9 @@
         </button>
       </div>
     </div>
+
+    <!-- weather -->
+    <div class="flyout hidden" id="weather-flyout"></div>
 
     <!-- calendar -->
     <div class="flyout hidden" id="cal-flyout">

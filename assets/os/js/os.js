@@ -514,6 +514,7 @@ const OS = (() => {
     closeStart();
     $('#tray-flyout').classList.add('hidden');
     $('#cal-flyout').classList.add('hidden');
+    $('#weather-flyout').classList.add('hidden');
     $('#ctx-menu').classList.add('hidden');
   }
 
@@ -547,6 +548,104 @@ const OS = (() => {
     for (let i = 0; i < first; i++) g += '<i></i>';
     for (let d = 1; d <= days; d++) g += `<i class="${d === now.getDate() ? 'today' : ''}">${d}</i>`;
     $('#cal-grid').innerHTML = g;
+  }
+
+  /* ---------- weather (Open-Meteo, no key required) ---------- */
+  const WEATHER_PLACE = { name: 'New Delhi', lat: 28.6139, lon: 77.2090 };
+
+  /* WMO weather codes → label + icon */
+  const WMO = [
+    [[0], 'Clear', 'wSun'],
+    [[1], 'Mainly clear', 'wSun'],
+    [[2], 'Partly cloudy', 'wPartly'],
+    [[3], 'Overcast', 'wCloud'],
+    [[45, 48], 'Fog', 'wFog'],
+    [[51, 53, 55, 56, 57], 'Drizzle', 'wRain'],
+    [[61, 63, 65, 66, 67], 'Rain', 'wRain'],
+    [[71, 73, 75, 77], 'Snow', 'wSnow'],
+    [[80, 81, 82], 'Showers', 'wRain'],
+    [[85, 86], 'Snow showers', 'wSnow'],
+    [[95, 96, 99], 'Thunderstorm', 'wStorm']
+  ];
+  const wmo = (code) => {
+    const hit = WMO.find(([codes]) => codes.includes(code));
+    return hit ? { label: hit[1], icon: I[hit[2]] } : { label: 'Unavailable', icon: I.wCloud };
+  };
+
+  let weather = null;
+
+  async function loadWeather() {
+    const url = 'https://api.open-meteo.com/v1/forecast'
+      + `?latitude=${WEATHER_PLACE.lat}&longitude=${WEATHER_PLACE.lon}`
+      + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code'
+      + '&daily=weather_code,temperature_2m_max,temperature_2m_min'
+      + '&timezone=auto&forecast_days=4';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      weather = await res.json();
+    } catch (e) {
+      weather = null;                       // offline, blocked, or the API is down
+    }
+    renderWeather();
+  }
+
+  function renderWeather() {
+    const btn = $('#weather-btn');
+    if (!btn) return;
+    if (!weather) {
+      // never invent a temperature — show the place and let the flyout explain
+      btn.classList.remove('loading');
+      $('#w-icon').innerHTML = I.wCloud;
+      $('#w-temp').textContent = WEATHER_PLACE.name;
+      $('#w-desc').textContent = 'Weather unavailable';
+      return;
+    }
+    const c = weather.current;
+    const { label, icon } = wmo(c.weather_code);
+    btn.classList.remove('loading');
+    $('#w-icon').innerHTML = icon;
+    $('#w-temp').textContent = Math.round(c.temperature_2m) + '°C';
+    $('#w-desc').textContent = `${label} · ${WEATHER_PLACE.name}`;
+  }
+
+  function renderWeatherFlyout() {
+    const f = $('#weather-flyout');
+    if (!weather) {
+      f.innerHTML = `<div class="wf-err">
+        Live weather for ${WEATHER_PLACE.name} could not be loaded — the device may be offline
+        or the forecast service unreachable.
+        <div style="margin-top:12px"><button class="toast-btn" id="w-retry">Try again</button></div>
+      </div>`;
+      $('#w-retry').onclick = (e) => { e.stopPropagation(); loadWeather().then(renderWeatherFlyout); };
+      return;
+    }
+    const c = weather.current;
+    const d = weather.daily;
+    const now = wmo(c.weather_code);
+    const days = d.time.map((t, i) => ({
+      day: i === 0 ? 'Today' : new Date(t).toLocaleDateString([], { weekday: 'short' }),
+      ...wmo(d.weather_code[i]),
+      hi: Math.round(d.temperature_2m_max[i]),
+      lo: Math.round(d.temperature_2m_min[i])
+    }));
+    f.innerHTML = `
+      <div class="wf-head">
+        ${now.icon}
+        <div>
+          <div class="wf-temp">${Math.round(c.temperature_2m)}°C</div>
+          <div class="wf-desc">${now.label}</div>
+          <div class="wf-place">${WEATHER_PLACE.name}, India</div>
+        </div>
+      </div>
+      <div class="wf-meta">
+        <div>Feels like<b>${Math.round(c.apparent_temperature)}°C</b></div>
+        <div>Humidity<b>${Math.round(c.relative_humidity_2m)}%</b></div>
+        <div>Wind<b>${Math.round(c.wind_speed_10m)} km/h</b></div>
+      </div>
+      <div class="wf-days">
+        ${days.map((x) => `<div class="wf-day">${x.day}${x.icon}<b>${x.hi}°</b><span>${x.lo}°</span></div>`).join('')}
+      </div>`;
   }
 
   /* ---------- context menu ---------- */
@@ -634,6 +733,7 @@ const OS = (() => {
     $('#tb-search').onclick = (e) => { e.stopPropagation(); openStart(); };
     $('#tray-btn').onclick = (e) => { e.stopPropagation(); toggleFlyout('#tray-flyout'); };
     $('#clock').onclick = (e) => { e.stopPropagation(); renderCalendar(); toggleFlyout('#cal-flyout'); };
+    $('#weather-btn').onclick = (e) => { e.stopPropagation(); renderWeatherFlyout(); toggleFlyout('#weather-flyout'); };
     $('#show-desktop').onclick = () => {
       const anyOpen = Array.from(winState.values()).some((s) => !s.min);
       winState.forEach((s, id) => anyOpen ? minimizeWin(id) : restoreWin(id));
@@ -666,7 +766,8 @@ const OS = (() => {
 
     /* global dismiss */
     document.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.flyout') || e.target.closest('#start-btn') || e.target.closest('#tray-btn') || e.target.closest('#clock')) return;
+      if (e.target.closest('.flyout') || e.target.closest('#start-btn') || e.target.closest('#tray-btn')
+        || e.target.closest('#clock') || e.target.closest('#weather-btn')) return;
       closeAllFlyouts();
       if (!e.target.closest('.dicon')) $$('.dicon').forEach((x) => x.classList.remove('selected'));
     });
@@ -698,6 +799,8 @@ const OS = (() => {
     });
 
     syncTray();
+    loadWeather();
+    setInterval(loadWeather, 30 * 60 * 1000);
     show('off');
   }
 
