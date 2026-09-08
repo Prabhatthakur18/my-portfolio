@@ -1,0 +1,58 @@
+# Static site — no build step, published straight from the repo root.
+
+[build]
+  publish = "."
+  command = ""
+
+# Friendly shortcuts
+[[redirects]]
+  from = "/resume"
+  to = "/assets/os/files/Prabhat_Thakur_Resume.pdf"
+  status = 200
+
+[[redirects]]
+  from = "/classic"
+  to = "/classic.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# The shell and its code are not fingerprinted, so they must revalidate —
+# otherwise a deploy would not reach anyone still holding a cached copy.
+# They are small and ETag-checked, so this costs a 304, not a re-download.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/assets/os/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/assets/os/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Content that changes rarely can sit in the browser cache.
+[[headers]]
+  for = "/assets/img/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/assets/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/assets/os/files/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
