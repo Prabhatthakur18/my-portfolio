@@ -16,7 +16,7 @@ const OS = (() => {
   const isTouch = () => window.matchMedia('(max-width: 760px)').matches;
 
   /* ---------- persisted config ---------- */
-  const DEFAULTS = { theme: 'dark', accent: '#0078d4', wallpaper: 'bloom', fastBoot: false };
+  const DEFAULTS = { theme: 'dark', accent: '#0078d4', wallpaper: 'mountain', fastBoot: false };
   let config = { ...DEFAULTS };
   try { Object.assign(config, JSON.parse(localStorage.getItem('prabhatos') || '{}')); } catch (e) { /* first run */ }
 
@@ -26,12 +26,61 @@ const OS = (() => {
   function applyConfig() {
     document.body.dataset.theme = config.theme;
     document.documentElement.style.setProperty('--accent', config.accent);
-    const w = WALLPAPERS.find((x) => x.id === config.wallpaper) || WALLPAPERS[0];
-    $('#desktop').style.backgroundImage = w.css;
-    $('#screen-lock').style.backgroundImage = w.css;
-    $('#screen-login').style.backgroundImage = w.css;
+    applyWallpaper();
     const meta = $('meta[name="theme-color"]');
     if (meta) meta.content = config.theme === 'dark' ? '#202020' : '#f3f3f3';
+  }
+
+  /* Motion is a preference, and video is a download — honour both. */
+  function skipMotion() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    const net = navigator.connection;
+    return !!(net && (net.saveData || /^(slow-)?2g$/.test(net.effectiveType || '')));
+  }
+
+  /* smaller cut on narrow screens; VP9 when the browser takes it */
+  function pickWallpaperSrc(w) {
+    const set = window.innerWidth <= 900 ? w.sources.small : w.sources.large;
+    return document.createElement('video').canPlayType('video/webm; codecs="vp9"') ? set.webm : set.mp4;
+  }
+
+  let desktopReady = false;
+
+  function applyWallpaper() {
+    const w = WALLPAPERS.find((x) => x.id === config.wallpaper) || WALLPAPERS[0];
+    const vid = $('#wallpaper-video');
+
+    // the still is the backdrop everywhere the video does not run
+    $('#desktop').style.background = w.css;
+    $('#screen-lock').style.background = w.css;
+    $('#screen-login').style.background = w.css;
+
+    if (!vid) return;
+    // hold the download back until the desktop is actually on screen
+    if (!w.live || skipMotion() || !desktopReady) { stopWallpaperVideo(); return; }
+
+    const src = pickWallpaperSrc(w);
+    vid.classList.remove('hidden');
+    if (vid.getAttribute('data-src') !== src) {
+      vid.setAttribute('data-src', src);
+      vid.poster = w.poster;
+      vid.src = src;
+    }
+    // a refused autoplay just leaves the still showing, which is fine
+    const play = vid.play();
+    if (play && play.catch) play.catch(() => {});
+  }
+
+  function stopWallpaperVideo() {
+    const vid = $('#wallpaper-video');
+    if (!vid) return;
+    vid.pause();
+    if (vid.getAttribute('data-src')) {
+      vid.removeAttribute('src');
+      vid.removeAttribute('data-src');
+      vid.load();               // release the decoder and stop buffering
+    }
+    vid.classList.add('hidden');
   }
   function setConfig(patch) { Object.assign(config, patch); saveConfig(); applyConfig(); }
 
@@ -121,6 +170,8 @@ const OS = (() => {
 
   function enterDesktop() {
     show('desktop');
+    desktopReady = true;
+    applyWallpaper();
     $('#desktop').classList.add('booting');
     setTimeout(() => $('#desktop').classList.remove('booting'), 700);
     setTimeout(() => {
@@ -131,6 +182,8 @@ const OS = (() => {
   /* ---------- power ---------- */
   async function power(kind) {
     closeAllFlyouts();
+    desktopReady = false;
+    stopWallpaperVideo();
     if (kind === 'sleep') {
       show('sleep');
       return;
@@ -791,6 +844,7 @@ const OS = (() => {
 
     /* keep windows on screen */
     window.addEventListener('resize', () => {
+      applyWallpaper();
       const b = bounds();
       winState.forEach((s, id) => {
         if (s.max) { Object.assign(s.el.style, { width: b.w + 'px', height: b.h + 'px', left: '0px', top: '0px' }); return; }

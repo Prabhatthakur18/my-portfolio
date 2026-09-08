@@ -56,3 +56,9 @@
   for = "/assets/os/files/*"
   [headers.values]
     Cache-Control = "public, max-age=86400"
+
+# wallpaper video and its poster never change under these names
+[[headers]]
+  for = "/assets/os/wallpaper/*"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"

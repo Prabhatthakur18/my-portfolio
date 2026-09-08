@@ -233,13 +233,27 @@ a { color: var(--accent); }
   text-shadow: 0 2px 14px rgba(0, 0, 0, .5);
 }
 #screen-lock.lifting { transform: translateY(-100%); opacity: 0; }
+/* a photographic wallpaper can be bright anywhere, so scrim the top and bottom
+   where the clock and the hint sit */
+#screen-lock::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .45), rgba(0, 0, 0, .04) 38%, rgba(0, 0, 0, .04) 60%, rgba(0, 0, 0, .55));
+  pointer-events: none;
+}
+.lock-time, .lock-date, .lock-hint { position: relative; }
 .lock-time { font-size: clamp(66px, 12vw, 116px); font-weight: 300; line-height: 1; letter-spacing: -2px; }
 .lock-date { font-size: clamp(18px, 3vw, 28px); font-weight: 400; margin-top: 6px; }
 .lock-hint {
   position: absolute;
   bottom: 12vh;
   font-size: 14px;
-  opacity: .85;
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, .38);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   animation: breathe 2.6s ease-in-out infinite;
 }
 @keyframes breathe { 0%, 100% { opacity: .45; } 50% { opacity: .95; } }
@@ -332,7 +346,20 @@ a { color: var(--accent); }
 #desktop.booting { animation: desk-in .6s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes desk-in { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: scale(1); } }
 
+/* live wallpaper sits behind every desktop layer */
+#wallpaper-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+  border: 0;
+}
+
 #desktop-icons {
+  z-index: 1;
   position: absolute;
   inset: 8px 8px calc(var(--taskbar-h) + 8px) 8px;
   display: grid;
@@ -370,7 +397,7 @@ a { color: var(--accent); }
 /* ============================================================
    3. Windows
    ============================================================ */
-#windows { position: absolute; inset: 0; pointer-events: none; }
+#windows { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 
 .win {
   position: absolute;
@@ -547,16 +574,16 @@ a { color: var(--accent); }
 .tb-search-label { flex: 1; text-align: left; }
 /* the picture tile Windows parks at the right end of the search box */
 .tb-search-thumb {
-  width: 40px;
+  width: 30px;
   height: 30px;
   flex: none;
   margin-left: auto;
-  border-radius: 6px;
-  overflow: hidden;
-  display: block;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg-hover);
 }
-.tb-search-thumb svg { width: 100%; height: 100%; display: block; }
+.tb-search-thumb svg { width: 17px; height: 17px; display: block; }
 
 /* weather widget — the bottom-left corner slot */
 .tb-weather {
@@ -1196,6 +1223,20 @@ body[data-theme="dark"] .badge-now { color: #6ccb6c; }
   background-position: center;
 }
 .wall.on { border-color: var(--accent); }
+.wall { position: relative; }
+.wall i {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  font-style: normal;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+}
 
 /* contact */
 .field { margin-bottom: 12px; }

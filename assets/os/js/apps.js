@@ -431,6 +431,19 @@ function appBin() {
 
 /* ---------- Settings ---------- */
 const WALLPAPERS = [
+  {
+    id: 'mountain',
+    name: 'Mountain Horizon',
+    live: true,
+    // VP9 where it is supported (~60% smaller), H.264 everywhere else
+    sources: {
+      large: { webm: 'assets/os/wallpaper/mountain-horizon.webm', mp4: 'assets/os/wallpaper/mountain-horizon.mp4' },
+      small: { webm: 'assets/os/wallpaper/mountain-horizon-720.webm', mp4: 'assets/os/wallpaper/mountain-horizon-720.mp4' }
+    },
+    poster: 'assets/os/wallpaper/mountain-horizon.jpg',
+    // the still stands in wherever the video should not play
+    css: "url('assets/os/wallpaper/mountain-horizon.jpg') center/cover no-repeat #10233a"
+  },
   { id: 'bloom', name: 'Bloom', css: 'radial-gradient(120% 110% at 22% 12%, #1e4fd8 0%, #0b2ea0 32%, #08154f 62%, #04081f 100%)' },
   { id: 'sunset', name: 'Ember', css: 'radial-gradient(120% 110% at 78% 14%, #ff7a45 0%, #c2255c 34%, #5b1e6b 66%, #14092b 100%)' },
   { id: 'forest', name: 'Verdant', css: 'radial-gradient(120% 110% at 26% 82%, #12c48b 0%, #0a7f6b 32%, #063d4a 64%, #041520 100%)' },
@@ -459,9 +472,9 @@ function appSettings() {
         </div>
       </div>
       <div class="set-row">
-        <div class="txt"><b>Desktop background</b><small>Four backgrounds, no downloads required.</small></div>
+        <div class="txt"><b>Desktop background</b><small>A live video wallpaper, plus four gradients. Motion stops when the machine sleeps or shuts down, and is skipped on reduced-motion or data-saver settings.</small></div>
         <div class="wallpapers" id="wall-row">
-          ${WALLPAPERS.map((w) => `<button class="wall ${cfg.wallpaper === w.id ? 'on' : ''}" data-wall="${w.id}" style="background-image:${w.css}" title="${w.name}"></button>`).join('')}
+          ${WALLPAPERS.map((w) => `<button class="wall ${cfg.wallpaper === w.id ? 'on' : ''}" data-wall="${w.id}" style="background:${w.css}" title="${w.name}">${w.live ? '<i>LIVE</i>' : ''}</button>`).join('')}
         </div>
       </div>
       <h2>System</h2>
