@@ -34,6 +34,15 @@ const PROFILE = {
   ]
 };
 
+/* EmailJS — same service/templates as the previous portfolio.
+   These are publishable client-side identifiers, not secrets. */
+const MAIL = {
+  publicKey: 'qNqLHLUspYip-oQ0g',
+  service: 'service_t82iedt',
+  templateNotify: 'template_dkl1mmo',   // → Prabhat's inbox
+  templateAutoReply: 'template_xxw5g5v' // → auto-reply to the sender
+};
+
 const EXPERIENCE = [
   {
     role: 'Software Engineer',

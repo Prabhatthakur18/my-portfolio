@@ -262,60 +262,149 @@ function appResume() {
 }
 
 /* ---------- Contact (Mail) ---------- */
+let mailReady = false;
+function initMail() {
+  if (mailReady) return true;
+  if (!window.emailjs) return false;      // CDN blocked or still loading
+  try { emailjs.init(MAIL.publicKey); mailReady = true; } catch (e) { return false; }
+  return true;
+}
+
 function appContact() {
   return {
     html: `
     <div class="app">
       <h1>New message</h1>
-      <p class="lede">Drop a line about a role, a build, or a problem worth solving. Sending opens your mail client with everything filled in.</p>
+      <p class="lede">Drop a line about a role, a build, or a problem worth solving. This one actually sends — straight to my inbox, with a copy back to you.</p>
       <div class="contact-links" style="margin:18px 0 22px">
         <a class="clink" href="mailto:${PROFILE.email}">${I.mail}<span><b>Email</b><small>${PROFILE.email}</small></span></a>
         <a class="clink" href="tel:${PROFILE.phoneRaw}">${I.phone}<span><b>Phone</b><small>${PROFILE.phone}</small></span></a>
         <a class="clink" href="${PROFILE.github}" target="_blank" rel="noopener">${I.github}<span><b>GitHub</b><small>${PROFILE.githubLabel}</small></span></a>
         ${PROFILE.linkedin ? `<a class="clink" href="${PROFILE.linkedin}" target="_blank" rel="noopener">${I.linkedin}<span><b>LinkedIn</b><small>${PROFILE.linkedinLabel}</small></span></a>` : ''}
       </div>
-      <form id="mailform">
+      <form id="mailform" novalidate>
         <div class="field"><label for="cf-name">Your name</label><input id="cf-name" required placeholder="Jane Doe"></div>
+        <div class="field"><label for="cf-email">Your email</label><input id="cf-email" type="email" required placeholder="jane@company.com"></div>
         <div class="field"><label for="cf-sub">Subject</label><input id="cf-sub" required placeholder="Frontend role at …"></div>
         <div class="field"><label for="cf-msg">Message</label><textarea id="cf-msg" rows="6" required placeholder="Hi Prabhat — "></textarea></div>
-        <div class="btnrow"><button class="linkbtn primary" type="submit">${I.mail}Send</button></div>
-        <p style="font-size:11.5px;color:var(--text-3);margin-top:10px">
-          Send hands the message to your mail client — nothing is posted to a server.
-          No mail client? The notification that appears offers Gmail and copy-to-clipboard instead.
-        </p>
+        <div class="btnrow">
+          <button class="linkbtn primary" id="cf-send" type="submit">${I.mail}<span id="cf-btn-text">Send message</span></button>
+        </div>
+        <div class="form-msg" id="cf-status" role="status" aria-live="polite"></div>
       </form>
     </div>`,
     mount(body) {
-      body.querySelector('#mailform').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = body.querySelector('#cf-name').value.trim();
-        const sub = body.querySelector('#cf-sub').value.trim();
-        const msg = body.querySelector('#cf-msg').value.trim();
-        const fullBody = msg + '\n\n— ' + name;
-        const q = `subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(fullBody)}`;
-        const mailto = `mailto:${PROFILE.email}?${q}`;
-        const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(PROFILE.email)}&${q}`;
-        const plain = `To: ${PROFILE.email}\nSubject: ${sub}\n\n${fullBody}`;
+      const form = body.querySelector('#mailform');
+      const btn = body.querySelector('#cf-send');
+      const btnText = body.querySelector('#cf-btn-text');
+      const status = body.querySelector('#cf-status');
+      const fields = {
+        name: body.querySelector('#cf-name'),
+        email: body.querySelector('#cf-email'),
+        sub: body.querySelector('#cf-sub'),
+        msg: body.querySelector('#cf-msg')
+      };
 
-        // mailto only lands if the visitor has a mail client registered, so the
-        // toast always offers a route that works without one
-        window.location.href = mailto;
+      const say = (text, kind) => {
+        status.textContent = text;
+        status.className = 'form-msg show ' + (kind || '');
+      };
+      const resetBtn = (label) => {
+        btn.disabled = false;
+        btn.classList.remove('sending', 'success', 'error');
+        btnText.textContent = label;
+      };
+
+      /* everything the visitor typed, in one pasteable block */
+      const plainText = (v) => `To: ${PROFILE.email}\nFrom: ${v.name} <${v.email}>\nSubject: ${v.sub}\n\n${v.msg}`;
+
+      /* offered whenever EmailJS cannot deliver, so the message is never lost */
+      const offerFallback = (v) => {
+        const q = `subject=${encodeURIComponent(v.sub)}&body=${encodeURIComponent(v.msg + '\n\n— ' + v.name + ' <' + v.email + '>')}`;
+        const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(PROFILE.email)}&${q}`;
         OS.toast(
           'Mail',
-          `Handed to your mail client. If nothing opened:
+          `Send it yourself instead — your message is not lost:
            <span class="toast-actions">
-             <a class="toast-btn" href="${gmail}" target="_blank" rel="noopener">Open in Gmail</a>
+             <a class="toast-btn" href="mailto:${PROFILE.email}?${q}">Mail app</a>
+             <a class="toast-btn" href="${gmail}" target="_blank" rel="noopener">Gmail</a>
              <button class="toast-btn" data-copy>Copy message</button>
            </span>`,
           I.mail,
           (node) => {
-            node.querySelectorAll('.toast-btn').forEach((btn) => btn.addEventListener('click', (ev) => ev.stopPropagation()));
+            node.querySelectorAll('.toast-btn').forEach((x) => x.addEventListener('click', (ev) => ev.stopPropagation()));
             node.querySelector('[data-copy]').addEventListener('click', async () => {
-              try { await navigator.clipboard.writeText(plain); OS.toast('Mail', 'Message copied — paste it into any mail app.'); }
+              try { await navigator.clipboard.writeText(plainText(v)); OS.toast('Mail', 'Message copied — paste it into any mail app.'); }
               catch { OS.toast('Mail', `Clipboard blocked. Email me directly at <b>${PROFILE.email}</b>.`); }
             });
           }
         );
+      };
+
+      Object.values(fields).forEach((f) => f.addEventListener('input', () => f.classList.remove('invalid')));
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const v = {
+          name: fields.name.value.trim(),
+          email: fields.email.value.trim(),
+          sub: fields.sub.value.trim(),
+          msg: fields.msg.value.trim()
+        };
+
+        let ok = true;
+        const bad = (el) => { el.classList.add('invalid'); ok = false; };
+        if (!v.name) bad(fields.name);
+        if (!/\S+@\S+\.\S+/.test(v.email)) bad(fields.email);
+        if (!v.sub) bad(fields.sub);
+        if (!v.msg) bad(fields.msg);
+        if (!ok) { say('Please fill in every field with a valid email address.', 'err'); return; }
+
+        if (!initMail()) {
+          say('Mail service unavailable right now — use one of the options in the notification.', 'err');
+          offerFallback(v);
+          return;
+        }
+
+        btn.disabled = true;
+        btn.classList.add('sending');
+        btnText.textContent = 'Sending…';
+        say('Sending…');
+
+        /* param names match the existing EmailJS templates */
+        const params = {
+          name: v.name,
+          from_email: v.email,
+          email: v.email,
+          subject: v.sub,
+          message: `Subject: ${v.sub}\n\n${v.msg}`
+        };
+
+        /* the auto-reply is a courtesy — only the inbox copy decides success */
+        const [notify, autoReply] = await Promise.allSettled([
+          emailjs.send(MAIL.service, MAIL.templateNotify, params),
+          emailjs.send(MAIL.service, MAIL.templateAutoReply, params)
+        ]);
+
+        if (notify.status === 'fulfilled') {
+          if (autoReply.status === 'rejected') console.warn('Auto-reply failed:', autoReply.reason);
+          btn.classList.remove('sending');
+          btn.classList.add('success');
+          btnText.textContent = 'Sent';
+          say("Message sent — I'll get back to you soon.", 'ok');
+          form.reset();
+          OS.toast('Mail', `Delivered to <b>${PROFILE.email}</b>. A confirmation is on its way to you.`, I.mail);
+          setTimeout(() => resetBtn('Send message'), 4000);
+          return;
+        }
+
+        console.error('EmailJS error:', notify.reason);
+        btn.classList.remove('sending');
+        btn.classList.add('error');
+        btnText.textContent = 'Failed — retry';
+        say('Could not send. Try again, or use one of the options in the notification.', 'err');
+        offerFallback(v);
+        setTimeout(() => resetBtn('Send message'), 4000);
       });
     }
   };

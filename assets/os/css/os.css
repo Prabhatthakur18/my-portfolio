@@ -1161,6 +1161,28 @@ body[data-theme="dark"] .badge-now { color: #6ccb6c; }
   resize: vertical;
 }
 .field input:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.field input.invalid, .field textarea.invalid {
+  border-color: #c42b1c;
+  box-shadow: 0 0 0 1px #c42b1c;
+}
+.form-msg {
+  font-size: 12.5px;
+  margin-top: 12px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity .2s, transform .2s;
+}
+.form-msg.show { opacity: 1; transform: none; }
+.form-msg.ok { color: #0f7b0f; font-weight: 600; }
+.form-msg.err { color: #c42b1c; font-weight: 600; }
+body[data-theme="dark"] .form-msg.ok { color: #6ccb6c; }
+body[data-theme="dark"] .form-msg.err { color: #ff99a4; }
+
+#cf-send.sending { opacity: .75; cursor: progress; }
+#cf-send.success { background: #0f7b0f; border-color: #0f7b0f; }
+#cf-send.error { background: #c42b1c; border-color: #c42b1c; }
+#cf-send:disabled { pointer-events: none; }
+
 .contact-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
 .clink {
   display: flex;
